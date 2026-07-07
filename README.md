@@ -112,19 +112,10 @@ received from the initiator.
 Built and tested against strongSwan's IKEv2 daemon (`charon`) with a
 real ETSI GS QKD 014 KME over the `http` backend.
 
-## Related work
+## Hybrid key exchange
 
 This plugin contributes a single QKD-derived secret to one RFC 9370
 `IKE_INTERMEDIATE` round; combining it with post-quantum KEMs (e.g.
 ML-KEM) happens one layer up, in strongSwan's own multi-KE key derivation
 — each method (`x25519`, `mlkem768`, `qkd`, ...) runs as an independent
 round and contributes its own secret to `SKEYSEED`.
-
-[qursa-uc3m/qkd-plugins-strongswan](https://github.com/qursa-uc3m/qkd-plugins-strongswan)
-takes a different approach: it hybridizes QKD with a PQC KEM *inside a
-single key-exchange method* (e.g. `qkd_mlkem3`) via a dedicated KEM
-provider, rather than composing separate RFC 9370 rounds. It also
-supports both ETSI 004 and 014 and both client- and server-initiated
-modes; this plugin is intentionally narrower — client-initiated ETSI 014
-only — in exchange for the sentinel-based graceful degradation described
-above.
