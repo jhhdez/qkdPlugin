@@ -116,6 +116,5 @@ real ETSI GS QKD 014 KME over the `http` backend.
 
 This plugin contributes a single QKD-derived secret to one RFC 9370
 `IKE_INTERMEDIATE` round; combining it with post-quantum KEMs (e.g.
-ML-KEM) happens one layer up, in strongSwan's own multi-KE key derivation
-— each method (`x25519`, `mlkem768`, `qkd`, ...) runs as an independent
+ML-KEM) happens one layer up, in strongSwan's own multi-KE key derivation, each method (`x25519`, `mlkem768`, `qkd`, ...) runs as an independent
 round and contributes its own secret to `SKEYSEED`.
