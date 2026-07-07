@@ -41,29 +41,24 @@ sentinel is negligible).
 └── qkd-etsi-api/                 standalone ETSI GS QKD 014 client library
     ├── include/qkd-etsi-api/api.h
     └── src/
-        ├── api.c                 backend dispatch
-        ├── http.c                REST client backend (libcurl)
-        └── simulated.c           hardcoded test-key backend, no KME needed
+        ├── api.c                 dispatch to the HTTP backend
+        └── http.c                REST client (libcurl)
 ```
 
 `qkd-etsi-api` is a small, independent C library implementing the ETSI 014
-client calls (`GET_STATUS`, `GET_KEY`, `GET_KEY_WITH_IDS`). It ships two
-backends, selected at build time:
-
-- **`http`** — talks to a real (or mock) ETSI 014 KME over REST JSON.
-- **`simulated`** — returns a fixed test key with a freshly generated UUID,
-  useful for exercising the IKE handshake without any KME.
+client calls (`GET_STATUS`, `GET_KEY`, `GET_KEY_WITH_IDS`) against a real
+KME over REST JSON. There is no fake/simulated backend: if the KME is
+unreachable, the plugin's own sentinel mechanism (see above) handles it
+gracefully instead.
 
 ## Building
 
-Requires strongSwan development headers, `libuuid`, and (for the `http`
-backend) `libcurl` and `libssl`.
+Requires strongSwan development headers, `libuuid`, and `libcurl`.
 
 ```bash
 # 1. Build and install the ETSI 014 client library
 cmake -S qkd-etsi-api -B qkd-etsi-api/build \
-    -DCMAKE_INSTALL_PREFIX=/usr/local \
-    -DQKD_BACKEND=http        # or: simulated
+    -DCMAKE_INSTALL_PREFIX=/usr/local
 cmake --build qkd-etsi-api/build
 sudo cmake --install qkd-etsi-api/build
 
@@ -114,7 +109,5 @@ received from the initiator.
 
 ## Status
 
-Built and tested against strongSwan's IKEv2 daemon (`charon`) with the ETSI
-014 `simulated` and `http` backends. The `simulated` backend is for
-protocol/handshake testing only — it provides no real entropy and must not
-be used in production.
+Built and tested against strongSwan's IKEv2 daemon (`charon`) with a
+real ETSI GS QKD 014 KME over the `http` backend.

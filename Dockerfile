@@ -8,21 +8,16 @@
 # Build:
 #   docker build -t strongswan-qkd .
 #
-# QKD_BACKEND selects the qkd-etsi-api backend compiled into
-# libqkd-etsi-api:
-#   simulated (default) — hardcoded test key, no KME required.
-#   http                — talks to a real/mock ETSI GS QKD 014 KME
-#                         over REST JSON (requires libcurl).
+# qkd-etsi-api talks to a real ETSI GS QKD 014 KME over REST JSON
+# (requires libcurl).
 # ============================================================
 
 ARG UBUNTU_VERSION=22.04
 ARG STRONGSWAN_TAG=6.0.2
-ARG QKD_BACKEND=simulated
 
 FROM ubuntu:${UBUNTU_VERSION} AS builder
 
 ARG STRONGSWAN_TAG
-ARG QKD_BACKEND
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -38,7 +33,6 @@ COPY qkd-etsi-api/ /src/qkd-etsi-api/
 RUN cmake -S /src/qkd-etsi-api -B /src/qkd-etsi-api/build \
         -GNinja \
         -DCMAKE_INSTALL_PREFIX=/usr/local \
-        -DQKD_BACKEND="${QKD_BACKEND}" \
     && cmake --build /src/qkd-etsi-api/build -j"$(nproc)" \
     && cmake --install /src/qkd-etsi-api/build
 

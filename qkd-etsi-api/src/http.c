@@ -1,9 +1,7 @@
 /*
- * src/http.c — HTTP QKD backend (calls the per-container Flask KME)
+ * src/http.c — HTTP QKD backend
  *
- * This backend is compiled when QKD_BACKEND=http.  It talks to the local
- * ETSI GS QKD 014 Flask KME stub running on localhost:8080 inside each
- * container.
+ * Talks to an ETSI GS QKD 014 KME over its REST JSON API.
  *
  * IKE initiator path (master SAE):
  *   GET_KEY  →  GET  {kme}/api/v1/keys/{slave_sae}/enc_keys?number=1&size=256
@@ -16,25 +14,19 @@
  *                        KME returns the same key indexed by that UUID.
  *
  * JSON is parsed with a minimal hand-rolled extractor — no external JSON
- * library needed.  This is safe because we own both the Flask server and the
- * C client and know the exact response format.
+ * library needed, since the response format is fixed by the ETSI 014 spec.
  *
- * Dependencies: libcurl, libopenssl (for base64 BIO), libuuid
+ * Dependencies: libcurl
  */
 
-#include <curl/curl.h>
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
-#include <openssl/evp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <uuid/uuid.h>
+
+#include <curl/curl.h>
 
 #include "api.h"
 #include "http.h"
-
-#ifdef QKD_USE_HTTP
 
 /* ── Memory accumulator for libcurl write callback ───────────────────────── */
 
@@ -338,5 +330,3 @@ const struct qkd_014_backend http_backend = {
     .get_key             = http_get_key,
     .get_key_with_ids    = http_get_key_with_ids,
 };
-
-#endif /* QKD_USE_HTTP */
