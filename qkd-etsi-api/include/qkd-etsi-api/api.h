@@ -28,6 +28,25 @@
 #define QKD_STATUS_NOT_FOUND    404
 #define QKD_STATUS_SERVER_ERROR 503
 
+/* Not HTTP codes: no response at all (DNS, connect, TLS, timeout), or a
+ * 200 response whose body could not be used. */
+#define QKD_STATUS_UNREACHABLE  0
+#define QKD_STATUS_BAD_RESPONSE 1
+
+/* ── Client configuration ────────────────────────────────────────────────── */
+typedef struct qkd_api_config {
+    long        connect_timeout_ms;  /* <= 0: 1000 */
+    long        timeout_ms;          /* <= 0: 2000 */
+    const char *ca_file;             /* CA to verify an https KME (NULL: system default) */
+    const char *cert_file;           /* SAE client certificate for mutual TLS */
+    const char *key_file;            /* its private key */
+    void      (*log)(const char *msg);  /* NULL: stderr */
+} qkd_api_config_t;
+
+/* Optional; call once before any other function. Strings are copied. */
+int  qkd_api_init(const qkd_api_config_t *config);
+void qkd_api_cleanup(void);
+
 /* ── Status object (section 6.1) ─────────────────────────────────────────── */
 typedef struct qkd_status {
     char    *source_KME_ID;

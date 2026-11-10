@@ -24,7 +24,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential autoconf automake libtool pkg-config cmake ninja-build \
     git ca-certificates \
-    libssl-dev libgmp-dev libsystemd-dev libcurl4-openssl-dev \
+    libssl-dev libgmp-dev libsystemd-dev libcurl4-openssl-dev libjson-c-dev \
     uuid-dev gperf bison flex \
     && rm -rf /var/lib/apt/lists/*
 
@@ -77,7 +77,7 @@ FROM ubuntu:${UBUNTU_VERSION}
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgmp10 libssl3 libcurl4 libuuid1 iproute2 ca-certificates \
+    libgmp10 libssl3 libcurl4 libjson-c5 libuuid1 iproute2 ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /usr/sbin/swanctl      /usr/sbin/swanctl

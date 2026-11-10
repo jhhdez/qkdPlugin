@@ -12,18 +12,28 @@ strongSwan negotiates as one round of an `IKE_INTERMEDIATE` exchange.
 
 ## Graceful degradation
 
-If the local KME is unreachable or its key pool is exhausted, the exchange
-does not abort. Instead:
+If a KME can't deliver a key (unreachable, TLS failure, out of keys, unknown
+key ID, bad response, or the plugin isn't configured), the exchange does not
+abort. Instead:
 
 - The side that failed to get a key sends a 16-zero-byte sentinel value
   instead of a real key ID.
 - The peer detects the sentinel and also contributes a zero secret to the
   key derivation, so both sides stay in sync.
 - The IKE_SA still completes, backed by whatever other KE methods are in
-  the proposal (e.g. x25519 + ML-KEM-768). A `[SECURITY DEGRADED]` line is
-  logged.
-- On the next rekey, if the KME is reachable again, the QKD leg resumes
-  automatically and a `[SECURITY RESTORED]` line is logged.
+  the proposal (e.g. x25519 + ML-KEM-768). A `[SECURITY DEGRADED]` line
+  with the reason is logged, e.g.
+  `QKD responder: key_ID unknown or already used (404)`.
+- Every IKE_SA setup, IKE rekey and CHILD_SA rekey is a separate QKD
+  exchange, so the QKD leg resumes on the next one if the KME is back. A
+  successful exchange logs `QKD: shared secret from key_ID <uuid>`.
+
+Set `ike_name = yes` on charon's logger to see which IKE_SA each line
+belongs to:
+
+```
+charon.filelog.stderr.ike_name = yes
+```
 
 This is an out-of-spec extension to the plugin's own wire format (real
 ETSI 014 key IDs are random UUIDs, so an accidental collision with the
@@ -42,7 +52,7 @@ sentinel is negligible).
     ├── include/qkd-etsi-api/api.h
     └── src/
         ├── api.c                 dispatch to the HTTP backend
-        └── http.c                REST client (libcurl)
+        └── http.c                REST client (libcurl, json-c)
 ```
 
 `qkd-etsi-api` is a small, independent C library implementing the ETSI 014
@@ -53,7 +63,8 @@ gracefully instead.
 
 ## Building
 
-Requires strongSwan development headers, `libuuid`, and `libcurl`.
+Requires strongSwan development headers, `libuuid`, `libcurl` and `json-c`
+(Debian/Ubuntu: `uuid-dev libcurl4-openssl-dev libjson-c-dev`).
 
 ```bash
 # 1. Build and install the ETSI 014 client library
@@ -85,14 +96,43 @@ vanilla strongSwan release plus this plugin.
 
 ## Configuration
 
-The plugin reads KME connection details from the environment at startup:
+Each host talks only to its own KME, whether it is the initiator or the
+responder of an exchange. Settings go in `charon.plugins.qkd`:
 
-| Variable | Description |
-|---|---|
-| `QKD_MASTER_KME_HOSTNAME` | Base URL of the initiator's KME, e.g. `http://kme-a:8080` |
-| `QKD_SLAVE_KME_HOSTNAME` | Base URL of the responder's KME |
-| `QKD_MASTER_SAE` | SAE ID of the initiator |
-| `QKD_SLAVE_SAE` | SAE ID of the responder |
+```
+qkd {
+    load = yes
+
+    # own KME and the remote peer's SAE ID
+    kme_url = https://kme-a:443
+    peer_sae = sae-bob
+
+    # mutual TLS, as required by ETSI GS QKD 014
+    ca = /etc/qkd/kme-ca.pem
+    cert = /etc/qkd/sae-alice.pem
+    key = /etc/qkd/sae-alice.key
+
+    # milliseconds
+    connect_timeout = 1000
+    timeout = 2000
+}
+```
+
+| Setting | Default | Description |
+|---|---|---|
+| `kme_url` | `$QKD_KME_URL` | base URL of this host's KME |
+| `peer_sae` | `$QKD_PEER_SAE` | SAE ID of the remote peer |
+| `ca` | system CAs | CA certificate to verify an `https` KME |
+| `cert`, `key` | none | client certificate and key for mutual TLS |
+| `connect_timeout` | 1000 | ms to connect to the KME |
+| `timeout` | 2000 | ms for the whole request; keep it well below the SA's `over_time` |
+
+`kme_url` and `peer_sae` are read for every exchange and fall back to the
+`QKD_KME_URL` and `QKD_PEER_SAE` environment variables, which is handy in
+containers. The TLS and timeout settings are read when the plugin loads. If
+`kme_url` or `peer_sae` is missing, every exchange degrades (see above).
+
+Only one peer SAE is supported per host for now.
 
 ## Using it in an IKE proposal
 
@@ -103,14 +143,15 @@ strongSwan `swanctl` proposal, e.g.:
 proposals = aes256gcm16-prfsha384-x25519-ke1_qkd
 ```
 
-The IKE initiator acts as the ETSI 014 master SAE (calls `GET_KEY`); the
-responder acts as the slave SAE (calls `GET_KEY_WITH_IDS`) using the key ID
-received from the initiator.
+The initiator of each exchange acts as the ETSI 014 master SAE (calls
+`GET_KEY`); the responder acts as the slave SAE (calls `GET_KEY_WITH_IDS`)
+using the key ID received from the initiator. The KME must return exactly
+that key ID and a 256-bit key, otherwise the exchange degrades.
 
 ## Status
 
 Built and tested against strongSwan's IKEv2 daemon (`charon`) with a
-real ETSI GS QKD 014 KME over the `http` backend.
+ETSI GS QKD 014 KME over plain HTTP and over HTTPS with mutual TLS.
 
 ## Hybrid key exchange
 

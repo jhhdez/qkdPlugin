@@ -13,6 +13,16 @@ static const struct qkd_014_backend *active_backend = &http_backend;
 
 /* ── Public API ────────────────────────────────────────────────────────────── */
 
+int qkd_api_init(const qkd_api_config_t *config)
+{
+    return http_init(config);
+}
+
+void qkd_api_cleanup(void)
+{
+    http_cleanup();
+}
+
 uint32_t GET_STATUS(const char *kme_hostname,
                     const char *slave_sae_id,
                     qkd_status_t *status)

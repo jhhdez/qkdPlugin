@@ -6,8 +6,11 @@ project(qkd-etsi-api VERSION 1.0 LANGUAGES C)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ── Dependencies ─────────────────────────────────────────────────────────────
-# HTTP client to the ETSI GS QKD 014 KME REST API.
+# HTTP client to the ETSI GS QKD 014 KME REST API, and a JSON parser for
+# its responses.
 find_package(CURL REQUIRED)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(JSONC REQUIRED IMPORTED_TARGET json-c)
 
 set(SOURCES
     src/api.c
@@ -29,7 +32,7 @@ target_include_directories(qkd-etsi-api
 )
 
 target_link_libraries(qkd-etsi-api
-    PRIVATE ${CURL_LIBRARIES}
+    PRIVATE ${CURL_LIBRARIES} PkgConfig::JSONC
 )
 
 target_compile_options(qkd-etsi-api PRIVATE
